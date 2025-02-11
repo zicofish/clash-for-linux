@@ -206,6 +206,63 @@ function proxy_off(){
 	unset NO_PROXY
 	echo -e "\033[31m[×] 已关闭代理\033[0m"
 }
+
+# ========= zico: 增加开始 ============
+# 参考 https://github.com/wnlen/clash-for-linux/issues/23，增加一些功能：切换节点、查看当前节点、查看节点列表 
+#（在某些服务限制使用地区时特别有用，例如binance不允许美国IP访问）
+
+api_url="http://localhost:9090"
+
+# 获取Clash代理节点列表
+get_proxy_list() {
+    # 使用您的命令获取代理节点列表
+    proxies=\$(curl -s -X GET -H "Content-Type: application/json" -H "Authorization: Bearer ${Secret}" \$api_url/proxies | jq -c '.proxies.Proxy.all')
+}
+
+show_proxy_list() {
+	get_proxy_list
+	echo "\$proxies"
+}
+
+# 选择代理节点
+select_proxy() {
+    local mode=\$1
+    if [ -z \$mode ]; then
+    mode="Proxy"
+    fi
+    get_proxy_list
+    echo "========== 代理节点列表 =========="
+    i=1
+    # ============= 修改此处 =============
+    echo "\$proxies" | jq -r '.[]' | while IFS= read -r proxy; do
+        echo "\$i. \$proxy"
+        i=\$((i+1))
+    done
+    echo "==================================="
+    read -p "请选择代理节点（输入编号）：" proxy_index
+    proxy=\$(echo "\$proxies" | jq -r ".[\$((proxy_index-1))]")
+    # ============= 修改结束 =============
+    if [[ -n \$proxy ]]; then
+        # 更新Clash的代理节点设置
+        curl -X PUT -s "\$api_url/proxies/\$mode" -H "Content-Type: application/json" -H "Authorization: Bearer ${Secret}" --data "{\"name\":\"\$proxy\"}" > /dev/null
+
+        echo "代理节点已更新为：\$proxy"
+    else
+        echo "无效的选择！"
+    fi
+}
+
+# 查看当前选择
+get_current_proxy() {
+	local mode=\$1
+    if [ -z \$mode ]; then
+    mode="Proxy"
+    fi
+	curl -X GET -s "\$api_url/proxies/\$mode" -H "Content-Type: application/json" -H "Authorization: Bearer ${Secret}"
+}
+
+# ========= zico: 增加结束 ============
+
 EOF
 
 echo -e "请执行以下命令加载环境变量: source /etc/profile.d/clash.sh\n"
