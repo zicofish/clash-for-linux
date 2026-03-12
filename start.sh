@@ -212,11 +212,12 @@ function proxy_off(){
 #（在某些服务限制使用地区时特别有用，例如binance不允许美国IP访问）
 
 api_url="http://localhost:9090"
+proxy_group="GLOBAL"
 
 # 获取Clash代理节点列表
 get_proxy_list() {
     # 使用您的命令获取代理节点列表
-    proxies=\$(curl -s -X GET -H "Content-Type: application/json" -H "Authorization: Bearer ${Secret}" \$api_url/proxies | jq -c '.proxies.Proxy.all')
+    proxies=\$(curl -s -X GET -H "Content-Type: application/json" -H "Authorization: Bearer ${Secret}" \$api_url/proxies | jq -c ".proxies.\$proxy_group.all")
 }
 
 show_proxy_list() {
@@ -228,7 +229,8 @@ show_proxy_list() {
 select_proxy() {
     local mode=\$1
     if [ -z \$mode ]; then
-    mode="Proxy"
+    # mode="Proxy"
+	mode=\$proxy_group
     fi
     get_proxy_list
     echo "========== 代理节点列表 =========="
@@ -256,7 +258,8 @@ select_proxy() {
 get_current_proxy() {
 	local mode=\$1
     if [ -z \$mode ]; then
-    mode="Proxy"
+    # mode="Proxy"
+	mode=\$proxy_group
     fi
 	curl -X GET -s "\$api_url/proxies/\$mode" -H "Content-Type: application/json" -H "Authorization: Bearer ${Secret}"
 }

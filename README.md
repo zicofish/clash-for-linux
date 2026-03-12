@@ -169,3 +169,27 @@ $ proxy_off
    目前此项目已集成自动识别和转换clash配置文件的功能。如果依然无法使用，则需要通过自建或者第三方平台（不推荐，有泄露风险）对订阅地址转换。
    
 3. 程序日志中出现`error: unsupported rule type RULE-SET`报错，解决方法查看官方[WIKI](https://github.com/Dreamacro/clash/wiki/FAQ#error-unsupported-rule-type-rule-set)
+
+
+# [zico] 遇到的一些问题
+1. `./conf/config.yaml` 在每次运行 `sudo bash start.sh` 都会被自动更新，从远程服务器上拉取最新config文件，因此最好不要尝试修改这个文件来存储一些个性化配置。
+
+2. 由于第1点的限制，带来了新的问题：我发现拉下来的 `config.yaml` 的默认 mode 配置是 
+```yaml
+# 规则模式：Rule（规则） / Global（全局代理）/ Direct（全局直连）
+mode: rule
+```
+但是测试过后，这个mode在我的服务器上完全不 work，不管连binance还是啥，都是 proxy 没启用的状态（因为不管我如何切换proxy节点， binance api call都会报错说 service unavailable from a restricted location）。当我把mode变成：
+```yaml
+# 规则模式：Rule（规则） / Global（全局代理）/ Direct（全局直连）
+mode: global
+```
+所有东西都能连了。因此，必须用global mode，但是由于每次start.sh都会更新这个文件，所以目前的临时解决办法是：
+```bash
+sudo bash start.sh
+# 修改 config.yaml (mode: global)
+# restart，因为 restart 不会更新 config 文件
+sudo bash restart.sh
+```
+
+3. 要注意 `start.sh` 里面的 `proxy_group`，我之前在 `config.yaml` 里面存了一个自定义 group，但是当 start.sh 刷新 config.yaml 后，group没了。所以这里最好使用 config.yaml 里本来就有的group，目前我用了 `GLOBAL`，这似乎是 clash 把所有proxies合起来的一个默认group，在 config.yaml 里本身是找不到的，但我也不确定这个group会不会在未来被删掉，所以如果运行 `show_proxy_list`, `get_current_proxy`, `select_proxy` 这些命令出问题的话，就参考这几个函数里如何用 `curl` 来访问 clash dashboard 服务的方法，直接在终端跑 curl，看看有哪些 proxy groups 可以用的。
