@@ -192,4 +192,11 @@ sudo bash start.sh
 sudo bash restart.sh
 ```
 
-3. 要注意 `start.sh` 里面的 `proxy_group`，我之前在 `config.yaml` 里面存了一个自定义 group，但是当 start.sh 刷新 config.yaml 后，group没了。所以这里最好使用 config.yaml 里本来就有的group，目前我用了 `GLOBAL`，这似乎是 clash 把所有proxies合起来的一个默认group，在 config.yaml 里本身是找不到的，但我也不确定这个group会不会在未来被删掉，所以如果运行 `show_proxy_list`, `get_current_proxy`, `select_proxy` 这些命令出问题的话，就参考这几个函数里如何用 `curl` 来访问 clash dashboard 服务的方法，直接在终端跑 curl，看看有哪些 proxy groups 可以用的。
+3. 为了防止服务器上的其他人用我的代理服务，我在 `config.yaml` 里把监听端口改成了 8893:
+```bash
+# port: 7890
+port: 8893
+```
+因为他们很多时候默认把全局 http proxy 环境变量设置成 http://127.0.0.1:7890 （比如在.bashrc里默认加载），不知道是软件自动设置的，还是他们人为自己设的。由于我对config.yaml 做了 2和3的修改，所以我存了个副本 `config-zico.yaml`，以防以后运行 start.sh 刷新 config 后需要修改用到。
+
+4. 要注意 `start.sh` 里面的 `proxy_group`，我之前在 `config.yaml` 里面存了一个自定义 group，但是当 start.sh 刷新 config.yaml 后，group没了。所以这里最好使用 config.yaml 里本来就有的group，目前我用了 `GLOBAL`，这似乎是 clash 把所有proxies合起来的一个默认group，在 config.yaml 里本身是找不到的，但我也不确定这个group会不会在未来被删掉，所以如果运行 `show_proxy_list`, `get_current_proxy`, `select_proxy` 这些命令出问题的话，就参考这几个函数里如何用 `curl` 来访问 clash dashboard 服务的方法，直接在终端跑 curl，看看有哪些 proxy groups 可以用的。
