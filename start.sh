@@ -144,10 +144,21 @@ fi
 #sed -n '/^proxies:/,$p' $Temp_Dir/clash.yaml > $Temp_Dir/proxy.txt
 sed -n '/^proxies:/,$p' $Temp_Dir/clash_config.yaml > $Temp_Dir/proxy.txt
 
+# 读取已有 config.yaml 中的 HTTP 代理端口，保留用户自定义端口（如改为 8893），避免被模板覆盖
+Old_HTTP_Port=""
+if [ -f "$Conf_Dir/config.yaml" ]; then
+    Old_HTTP_Port=$(awk '/^port:/{print $2; exit}' "$Conf_Dir/config.yaml")
+fi
+
 # 合并形成新的config.yaml
 cat $Temp_Dir/templete_config.yaml > $Temp_Dir/config.yaml
 cat $Temp_Dir/proxy.txt >> $Temp_Dir/config.yaml
 \cp $Temp_Dir/config.yaml $Conf_Dir/
+
+# 若存在用户的自定义端口，则在新生成的 config.yaml 中恢复该端口
+if [ -n "$Old_HTTP_Port" ]; then
+    sed -ri "s/^(port:).*/\1 ${Old_HTTP_Port}/" "$Conf_Dir/config.yaml"
+fi
 
 # Configure Clash Dashboard
 Work_Dir=$(cd $(dirname $0); pwd)
@@ -185,13 +196,18 @@ echo ''
 
 # 添加环境变量(root权限)
 cat>/etc/profile.d/clash.sh<<EOF
+# Clash 配置目录（由 start.sh 自动写入）
+CLASH_CONF_DIR=${Conf_Dir}
+
 # 开启系统代理
 function proxy_on() {
-	export http_proxy=http://127.0.0.1:7890
-	export https_proxy=http://127.0.0.1:7890
+	local clash_port=\$(awk '/^port:/{print \$2; exit}' "\$CLASH_CONF_DIR/config.yaml")
+	: \${clash_port:=7890}
+	export http_proxy=http://127.0.0.1:\$clash_port
+	export https_proxy=http://127.0.0.1:\$clash_port
 	export no_proxy=127.0.0.1,localhost
-    	export HTTP_PROXY=http://127.0.0.1:7890
-    	export HTTPS_PROXY=http://127.0.0.1:7890
+    	export HTTP_PROXY=http://127.0.0.1:\$clash_port
+    	export HTTPS_PROXY=http://127.0.0.1:\$clash_port
  	export NO_PROXY=127.0.0.1,localhost
 	echo -e "\033[32m[√] 已开启代理\033[0m"
 }
